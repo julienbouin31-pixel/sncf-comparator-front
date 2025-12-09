@@ -1,32 +1,32 @@
 <script setup lang="ts">
 defineProps<{
   label: string
-  modelValue: string | number
+  modelValue: string
   type?: string
   placeholder?: string
+  helpText?: string
 }>()
 
-// On définit l'emit
 const emit = defineEmits(['update:modelValue'])
 
-// Fonction propre pour gérer l'input et le typage
-const handleInput = (event: Event) => {
-  const target = event.target as HTMLInputElement
+const handleInput = (e: Event) => {
+  const target = e.target as HTMLInputElement
   emit('update:modelValue', target.value)
 }
 </script>
 
 <template>
-  <div class="flex flex-col gap-1.5">
-    <label class="text-xs font-bold text-slate-400 uppercase tracking-wide ml-1">
-      {{ label }}
-    </label>
-    <input
-      :type="type || 'text'"
-      :value="modelValue"
-      @input="handleInput"
-      :placeholder="placeholder"
-      class="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-3 outline-none transition-all placeholder-slate-500"
-    />
+  <div class="group">
+    <label class="block text-xs font-medium text-slate-400 mb-1 ml-1 uppercase">{{ label }}</label>
+    <div class="relative transition-all duration-300 transform focus-within:scale-[1.02]">
+      <input 
+        :type="type || 'text'"
+        :value="modelValue"
+        @input="handleInput"
+        :placeholder="placeholder"
+        class="w-full bg-slate-800/50 border border-slate-700 text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none placeholder-slate-500 transition-all" 
+      />
+    </div>
+    <p v-if="helpText" class="text-[10px] text-slate-500 mt-1 ml-1">{{ helpText }}</p>
   </div>
 </template>

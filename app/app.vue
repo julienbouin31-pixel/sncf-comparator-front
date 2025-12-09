@@ -1,18 +1,20 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 
-// --- État du formulaire ---
-const departure = ref('')
-const arrival = ref('')
+// --- State (Données du formulaire) ---
+// On sépare le texte affiché (v-model) de l'objet gare sélectionné (pour l'ID)
+const departureName = ref('')
+const arrivalName = ref('')
+
+// Stockage des objets gares complets (avec id_station, uic_code, etc.)
+const selectedDeparture = ref<any>(null)
+const selectedArrival = ref<any>(null)
+
 const birthDate = ref('')
 const status = ref('employee')
 const frequency = ref(4)
 
-// --- États UI (Simulation d'autocomplete) ---
-const isFocusDep = ref(false)
-const isFocusArr = ref(false)
-
-// Liste des statuts basée sur ton enum backend
+// --- Listes & Options ---
 const statuses = [
   { value: 'employee', label: '👔 Salarié' },
   { value: 'student', label: '🎓 Étudiant (-26 ans)' },
@@ -22,32 +24,57 @@ const statuses = [
   { value: 'retired', label: '👴 Retraité' },
 ]
 
-// --- Logique (Placeholder pour l'appel API) ---
-const handleSearch = () => {
-  console.log({
-    dep: departure.value,
-    arr: arrival.value,
-    date: birthDate.value,
-    status: status.value,
-    freq: frequency.value
-  })
-  alert("Lancement de la simulation... (Connecter le backend ici)")
+const frequencyLabel = computed(() => {
+  return frequency.value === 1 
+    ? '1 aller-retour / mois' 
+    : `${frequency.value} allers-retours / mois`
+})
+
+// --- Handlers (Actions) ---
+
+// Appelée quand l'utilisateur clique sur une gare dans la liste "Départ"
+const onSelectDeparture = (station: any) => {
+  selectedDeparture.value = station
+  console.log("✅ Gare départ sélectionnée :", station.name, "(ID:", station.id_station, ")")
 }
 
-// Formatage du texte de fréquence
-const frequencyLabel = computed(() => {
-  if (frequency.value === 1) return '1 aller-retour / mois'
-  return `${frequency.value} allers-retours / mois`
-})
+// Appelée quand l'utilisateur clique sur une gare dans la liste "Arrivée"
+const onSelectArrival = (station: any) => {
+  selectedArrival.value = station
+  console.log("✅ Gare arrivée sélectionnée :", station.name, "(ID:", station.id_station, ")")
+}
+
+// Lancement de la simulation
+const handleSearch = () => {
+  // Construction du payload pour le backend
+  const payload = {
+    departure_station_id: selectedDeparture.value?.id_station,
+    arrival_station_id: selectedArrival.value?.id_station,
+    birth_date: birthDate.value,
+    status: status.value,
+    frequency: frequency.value
+  }
+  
+  console.log("🚀 Envoi de la simulation :", payload)
+  
+  // Validation basique
+  if (!payload.departure_station_id || !payload.arrival_station_id) {
+    alert("Oups ! Veuillez sélectionner des gares valides (cliquez sur les suggestions).")
+    return
+  }
+  
+  alert(`Simulation lancée !\nDe : ${selectedDeparture.value.name}\nVers : ${selectedArrival.value.name}`)
+  // TODO: Appel API réel ici (ex: await $fetch('/api/simulate', ...))
+}
 </script>
 
 <template>
   <div class="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white overflow-hidden relative">
     
     <div class="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-      <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-indigo-600 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob"></div>
-      <div class="absolute top-[-10%] right-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-2000"></div>
-      <div class="absolute bottom-[-20%] left-[20%] w-96 h-96 bg-pink-600 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-4000"></div>
+        <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-indigo-600 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob"></div>
+        <div class="absolute top-[-10%] right-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-2000"></div>
+        <div class="absolute bottom-[-20%] left-[20%] w-96 h-96 bg-pink-600 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-4000"></div>
     </div>
 
     <div class="relative z-10 container mx-auto px-4 h-screen flex flex-col justify-center items-center">
@@ -60,13 +87,13 @@ const frequencyLabel = computed(() => {
           Optimisez vos trajets.
         </h1>
         <p class="text-lg text-slate-400">
-          Ne payez plus le prix fort. Simulez instantanément la rentabilité de toutes les cartes et abonnements SNCF/TER selon vos habitudes réelles.
+          Ne payez plus le prix fort. Simulez instantanément la rentabilité de toutes les cartes et abonnements SNCF/TER.
         </p>
       </div>
 
       <div class="w-full max-w-4xl bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl p-8 md:p-10">
         
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
           
           <div class="md:col-span-7 space-y-6">
             <h3 class="text-xl font-semibold text-white mb-4 flex items-center gap-2">
@@ -75,41 +102,40 @@ const frequencyLabel = computed(() => {
             </h3>
             
             <div class="space-y-4 relative">
-              <div class="group">
-                <label class="block text-xs font-medium text-slate-400 mb-1 ml-1 uppercase">Départ</label>
-                <div class="relative transition-all duration-300 transform focus-within:scale-[1.02]">
-                  <input 
-                    type="text" 
-                    v-model="departure"
-                    @focus="isFocusDep = true" @blur="isFocusDep = false"
-                    placeholder="Ex: Lille Flandres"
-                    class="w-full bg-slate-800/50 border border-slate-700 text-white rounded-xl px-4 py-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none placeholder-slate-500 transition-all"
-                  />
-                  <div class="absolute right-4 top-4 text-slate-500">
+              
+              <div class="relative z-50">
+                <StationSearch 
+                  label="Départ" 
+                  v-model="departureName" 
+                  @select="onSelectDeparture"
+                  placeholder="Ex: Lille Flandres"
+                  color-focus="indigo"
+                >
+                  <template #icon>
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-                  </div>
-                </div>
+                  </template>
+                </StationSearch>
               </div>
 
-              <div class="hidden md:block absolute left-[1.6rem] top-[4.5rem] h-8 w-0.5 bg-gradient-to-b from-indigo-500 to-transparent opacity-30"></div>
+              <div class="hidden md:block absolute left-[1.6rem] top-[3.5rem] h-24 w-0.5 bg-gradient-to-b from-indigo-500 to-pink-500 opacity-30 z-0 pointer-events-none"></div>
 
-              <div class="group">
-                <label class="block text-xs font-medium text-slate-400 mb-1 ml-1 uppercase">Arrivée</label>
-                <div class="relative transition-all duration-300 transform focus-within:scale-[1.02]">
-                  <input 
-                    type="text" 
-                    v-model="arrival"
-                    placeholder="Ex: Paris Nord"
-                    class="w-full bg-slate-800/50 border border-slate-700 text-white rounded-xl px-4 py-4 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none placeholder-slate-500 transition-all"
-                  />
-                  <div class="absolute right-4 top-4 text-slate-500">
-                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                  </div>
-                </div>
+              <div class="relative z-40">
+                <StationSearch 
+                  label="Arrivée" 
+                  v-model="arrivalName" 
+                  @select="onSelectArrival"
+                  placeholder="Ex: Paris Nord"
+                  color-focus="pink"
+                >
+                  <template #icon>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                  </template>
+                </StationSearch>
               </div>
+
             </div>
             
-            <div class="pt-4">
+            <div class="pt-4 relative z-30">
                <div class="flex justify-between items-end mb-2">
                  <label class="block text-xs font-medium text-slate-400 uppercase">Fréquence mensuelle</label>
                  <span class="text-indigo-300 font-bold text-lg">{{ frequencyLabel }}</span>
@@ -134,26 +160,19 @@ const frequencyLabel = computed(() => {
                   Votre Profil
                 </h3>
 
-                <div class="mb-4">
-                  <label class="block text-xs font-medium text-slate-400 mb-1 ml-1 uppercase">Date de naissance</label>
-                  <input 
+                <div class="space-y-4">
+                  <BaseInput 
+                    label="Date de naissance" 
                     type="date" 
-                    v-model="birthDate"
-                    class="w-full bg-slate-800/50 border border-slate-700 text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none" 
+                    v-model="birthDate" 
+                    help-text="Pour calculer l'âge (Cartes Jeune/Senior)"
                   />
-                  <p class="text-[10px] text-slate-500 mt-1 ml-1">Nécessaire pour les cartes Jeune / Senior</p>
-                </div>
 
-                <div>
-                  <label class="block text-xs font-medium text-slate-400 mb-1 ml-1 uppercase">Statut</label>
-                  <div class="relative">
-                    <select v-model="status" class="w-full appearance-none bg-slate-800/50 border border-slate-700 text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer">
-                      <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
-                    </select>
-                    <div class="absolute right-4 top-4 pointer-events-none text-slate-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                    </div>
-                  </div>
+                  <BaseSelect 
+                    label="Statut" 
+                    v-model="status" 
+                    :options="statuses" 
+                  />
                 </div>
              </div>
 
